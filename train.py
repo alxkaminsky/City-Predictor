@@ -87,7 +87,7 @@ def one_hot(labels):
 
 
 def fit(num_iter=1000, alpha=1.0, lam=0.001):
-    dataset = pd.read_csv("data/cleaned_dataset.csv")
+    dataset = pd.read_csv("cleaned_dataset.csv")
 
     vocab = mine_words(dataset['Quote'])
     X, feature_cols, stats = transform(dataset, vocab)
