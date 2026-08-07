@@ -20,7 +20,7 @@ def mine_words(quotes, top_n=250):
         for w in {w for w in re.findall(r'[a-z]{3,}', text) if w not in STOPWORDS}:
             words.setdefault(w, 0)
             words[w] += 1
-    return [k for k, v in sorted(words.items(), key=lambda item: item[1], reverse=True)[:250]]
+    return [k for k, v in sorted(words.items(), key=lambda item: item[1], reverse=True)[:top_n]]
 
 
 def softmax(Z):
@@ -51,22 +51,27 @@ def transform(data, vocab, stats=None):
     """
     Build the final feature matrix used in sample.ipynb
     """
-    feature_cols = [c for c in data.columns if c not in ('id', 'Quote', 'Label')]
-
+    feature_cols = [c for c in data.columns if c not in ('id', 'Quote', 'Label', 'Relatable', 'Company')]
+    company = data['Company'].fillna('').astype(str)
+    expanded_com = np.array([['Partner' in entry, 'Friends' in entry, 'Siblings' in entry, 'Co-worker' in entry]
+                             for entry in company], dtype='float64')
+    expanded_rel = np.array([[float(v) if (v := entry.split("=>")[-1].strip()) else np.nan
+                              for entry in row.split(',')] for row in data['Relatable'].astype(str)])
     numeric = data[feature_cols].apply(pd.to_numeric, errors='coerce').astype('float64').to_numpy()
 
+    scaled = np.hstack([numeric, expanded_rel])
     if stats is None:
-        mean = np.nanmean(numeric, axis=0)
-        std = np.nanstd(numeric, axis=0)
+        mean = np.nanmean(scaled, axis=0)
+        std = np.nanstd(scaled, axis=0)
         std[std == 0] = 1.0
         stats = (mean, std)
     mean, std = stats
-    numeric = (numeric - mean) / std
+    scaled = (scaled - mean) / std
 
     quotes = data['Quote'].fillna('').astype(str).map(fix_quote).str.lower()
     words = np.array([[1.0 if w in q else 0.0 for w in vocab] for q in quotes])
 
-    X = np.hstack([numeric, words])
+    X = np.hstack([scaled, expanded_com, words])
     return X, feature_cols, stats
 
 
@@ -81,10 +86,10 @@ def one_hot(labels):
     return T
 
 
-def fit(num_iter=1000, alpha=1.0, lam=0.003):
-    dataset = pd.read_csv("data/cleaned_dataset_complete.csv")
+def fit(num_iter=1000, alpha=1.0, lam=0.001):
+    dataset = pd.read_csv("data/cleaned_dataset.csv")
 
-    vocab = mine_words(dataset['Quote'], top_n=250)
+    vocab = mine_words(dataset['Quote'])
     X, feature_cols, stats = transform(dataset, vocab)
     t = dataset['Label'].to_numpy()
 
