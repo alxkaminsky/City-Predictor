@@ -35,8 +35,6 @@ The full experimental story, with plots and confusion matrices, is in [`sample.i
 train.py              from-scratch model: feature pipeline, softmax, gradient, training loop
 predict.py            predict_all(csv_path) -> list of city names
 sample.ipynb          exploration, model comparison, tuning, and error analysis
-split_relatable.py    preprocessing used by the notebook (splits the relatability column)
-split_company.py      preprocessing used by the notebook (one-hot encodes the company column)
 data/                 cleaned survey data
 ```
 
